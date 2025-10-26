@@ -1,0 +1,37 @@
+{
+  "name": "snatchers-monorepo-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "concurrently --kill-others-on-fail --prefix \"[{name}]\" --names \"backend,frontend\" --colors \"blue,green\" \"npm run start:backend\" \"npm run start:frontend\"",
+    "dev": "concurrently --kill-others-on-fail --prefix \"[{name}]\" --names \"backend,frontend\" --colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start:backend": "npm --prefix ./Snatchers_Backend/snatchers-backend-main start",
+    "start:frontend": "npm --prefix ./Snatchers_Frontend/snatchers.in-main start",
+    "dev:backend": "npm --prefix ./Snatchers_Backend/snatchers-backend-main run dev",
+    "dev:frontend": "npm --prefix ./Snatchers_Frontend/snatchers.in-main start",
+    "install:all": "npm install && npm --prefix ./Snatchers_Backend/snatchers-backend-main install && npm --prefix ./Snatchers_Frontend/snatchers.in-main install",
+    "clean": "npm run clean:backend && npm run clean:frontend && rm -rf node_modules",
+    "clean:backend": "npm --prefix ./Snatchers_Backend/snatchers-backend-main run clean || rm -rf ./Snatchers_Backend/snatchers-backend-main/node_modules",
+    "clean:frontend": "npm --prefix ./Snatchers_Frontend/snatchers.in-main run clean || rm -rf ./Snatchers_Frontend/snatchers.in-main/node_modules",
+    "test": "concurrently --kill-others-on-fail --prefix \"[{name}]\" --names \"backend,frontend\" --colors \"blue,green\" \"npm run test:backend\" \"npm run test:frontend\"",
+    "test:backend": "npm --prefix ./Snatchers_Backend/snatchers-backend-main test",
+    "test:frontend": "npm --prefix ./Snatchers_Frontend/snatchers.in-main test -- --watchAll=false",
+    "build": "npm run build:frontend",
+    "build:frontend": "npm --prefix ./Snatchers_Frontend/snatchers.in-main run build",
+    "health": "node scripts/health-check.js",
+    "logs": "npm --prefix ./Snatchers_Backend/snatchers-backend-main run logs",
+    "setup": "npm run install:all && npm run health",
+    "dashboard": "node scripts/dev-dashboard.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2",
+    "wait-on": "^7.2.0",
+    "cross-env": "^7.0.3"
+  },
+  "dependencies": {
+    "mongodb": "^6.20.0",
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2"
+  }
+}

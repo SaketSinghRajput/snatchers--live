@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Connection Tester - Snatchers</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      max-width: 1000px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f9fafb;
+    }
+    .container {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #1f2937;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 30px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f3f4f6;
+      border-radius: 8px;
+    }
+    .test-section h3 {
+      margin-top: 0;
+      color: #374151;
+    }
+    .button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    .button:hover {
+      background: #2563eb;
+    }
+    .button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .button.success {
+      background: #10b981;
+    }
+    .button.success:hover {
+      background: #059669;
+    }
+    .button.danger {
+      background: #ef4444;
+    }
+    .button.danger:hover {
+      background: #dc2626;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+    }
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #ef4444;
+    }
+    .status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #3b82f6;
+    }
+    .status.warning {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+    .log {
+      background: #1f2937;
+      color: #f3f4f6;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 500px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 4px 0;
+    }
+    .log-entry.success {
+      color: #10b981;
+    }
+    .log-entry.error {
+      color: #ef4444;
+    }
+    .log-entry.info {
+      color: #60a5fa;
+    }
+    .log-entry.warning {
+      color: #fbbf24;
+    }
+    .input-group {
+      margin: 15px 0;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #374151;
+      font-weight: 500;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    code {
+      background: #e5e7eb;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #1f2937;
+      font-size: 13px;
+    }
+    .flex {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .summary-card {
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      border: 2px solid #e5e7eb;
+    }
+    .summary-card h4 {
+      margin: 0 0 10px 0;
+      color: #6b7280;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .summary-card p {
+      margin: 0;
+      font-size: 24px;
+      font-weight: bold;
+      color: #1f2937;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 API Connection Tester</h1>
+    <p class="subtitle">Diagnose CORS, authentication, and API connectivity issues</p>
+
+    <div class="summary">
+      <div class="summary-card">
+        <h4>Backend Status</h4>
+        <p id="backendStatus">⏳ Testing...</p>
+      </div>
+      <div class="summary-card">
+        <h4>CORS Status</h4>
+        <p id="corsStatus">⏳ Testing...</p>
+      </div>
+      <div class="summary-card">
+        <h4>Auth Status</h4>
+        <p id="authStatus">⏳ Pending</p>
+      </div>
+      <div class="summary-card">
+        <h4>Tests Passed</h4>
+        <p id="testsPassed">0/0</p>
+      </div>
+    </div>
+
+    <!-- Backend Connection Test -->
+    <div class="test-section">
+      <h3>1. Backend Connection Test</h3>
+      <p>Check if the backend server is running and accessible.</p>
+      <div class="flex">
+        <button class="button" onclick="testBackendConnection()">🔌 Test Backend</button>
+        <button class="button" onclick="testBackendHealth()">❤️ Health Check</button>
+      </div>
+      <div id="backendResult"></div>
+    </div>
+
+    <!-- CORS Test -->
+    <div class="test-section">
+      <h3>2. CORS Configuration Test</h3>
+      <p>Verify Cross-Origin Resource Sharing is properly configured.</p>
+      <div class="flex">
+        <button class="button" onclick="testCORS()">🌐 Test CORS</button>
+        <button class="button" onclick="testPreflight()">✈️ Test Preflight</button>
+      </div>
+      <div id="corsResult"></div>
+    </div>
+
+    <!-- Authentication Test -->
+    <div class="test-section">
+      <h3>3. Authentication Test</h3>
+      <p>Test authentication endpoints and token handling.</p>
+      <div class="input-group">
+        <label for="authToken">JWT Token (optional - leave empty to test 401 response):</label>
+        <input type="text" id="authToken" placeholder="Bearer token...">
+      </div>
+      <div class="flex">
+        <button class="button" onclick="testAuth()">🔐 Test Auth</button>
+        <button class="button" onclick="testWishlist()">❤️ Test Wishlist</button>
+        <button class="button" onclick="testCart()">🛒 Test Cart</button>
+      </div>
+      <div id="authResult"></div>
+    </div>
+
+    <!-- Search Test -->
+    <div class="test-section">
+      <h3>4. Search API Test</h3>
+      <p>Test search functionality and query parameters.</p>
+      <div class="input-group">
+        <label for="searchQuery">Search Query:</label>
+        <input type="text" id="searchQuery" placeholder="e.g., shoes" value="test">
+      </div>
+      <div class="flex">
+        <button class="button" onclick="testSearch()">🔍 Test Search</button>
+        <button class="button" onclick="testSearchPagination()">📄 Test Pagination</button>
+      </div>
+      <div id="searchResult"></div>
+    </div>
+
+    <!-- All Tests -->
+    <div class="test-section">
+      <h3>5. Run All Tests</h3>
+      <p>Execute all tests in sequence to get a complete diagnostic report.</p>
+      <button class="button success" onclick="runAllTests()">▶️ Run All Tests</button>
+      <button class="button danger" onclick="clearLog()">🗑️ Clear Log</button>
+    </div>
+
+    <!-- Log Output -->
+    <div class="log" id="log">
+      <div class="log-entry info">[INFO] API Tester ready. Click a button to start testing.</div>
+    </div>
+  </div>
+
+  <script>
+    const logContainer = document.getElementById('log');
+    const API_BASE = 'http://localhost:5000';
+    
+    let testResults = {
+      passed: 0,
+      total: 0
+    };
+
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function showStatus(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.innerHTML = `<div class="status ${type}">${message}</div>`;
+      }
+    }
+
+    function updateSummary() {
+      document.getElementById('testsPassed').textContent = `${testResults.passed}/${testResults.total}`;
+    }
+
+    function recordTest(passed) {
+      testResults.total++;
+      if (passed) testResults.passed++;
+      updateSummary();
+    }
+
+    function clearLog() {
+      logContainer.innerHTML = '<div class="log-entry info">[INFO] Log cleared.</div>';
+      testResults = { passed: 0, total: 0 };
+      updateSummary();
+      document.getElementById('backendStatus').textContent = '⏳ Testing...';
+      document.getElementById('corsStatus').textContent = '⏳ Testing...';
+      document.getElementById('authStatus').textContent = '⏳ Pending';
+    }
+
+    async function testBackendConnection() {
+      log('Testing backend connection...', 'info');
+      showStatus('backendResult', '⏳ Testing...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/`, {
+          method: 'GET',
+          cache: 'no-store'
+        });
+
+        if (response.ok) {
+          const data = await response.text();
+          log(`✅ Backend is running! Status: ${response.status}`, 'success');
+          log(`Response: ${data.substring(0, 100)}...`, 'info');
+          showStatus('backendResult', `✅ Backend connected successfully (${response.status})`, 'success');
+          document.getElementById('backendStatus').textContent = '✅ Online';
+          recordTest(true);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Backend connection failed: ${error.message}`, 'error');
+        showStatus('backendResult', `❌ Backend not accessible: ${error.message}`, 'error');
+        document.getElementById('backendStatus').textContent = '❌ Offline';
+        recordTest(false);
+      }
+    }
+
+    async function testBackendHealth() {
+      log('Testing backend health endpoint...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/health`, {
+          method: 'GET',
+          cache: 'no-store'
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.status === 'ok') {
+          log(`✅ Health check passed: ${JSON.stringify(data)}`, 'success');
+          showStatus('backendResult', '✅ Backend is healthy', 'success');
+          recordTest(true);
+        } else {
+          throw new Error('Health check failed');
+        }
+      } catch (error) {
+        log(`❌ Health check failed: ${error.message}`, 'error');
+        showStatus('backendResult', `❌ Health check failed: ${error.message}`, 'error');
+        recordTest(false);
+      }
+    }
+
+    async function testCORS() {
+      log('Testing CORS configuration...', 'info');
+      showStatus('corsResult', '⏳ Testing CORS...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/api/products`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        log(`✅ CORS test passed! Status: ${response.status}`, 'success');
+        log(`CORS headers: ${response.headers.get('access-control-allow-origin')}`, 'info');
+        showStatus('corsResult', '✅ CORS is properly configured', 'success');
+        document.getElementById('corsStatus').textContent = '✅ Configured';
+        recordTest(true);
+      } catch (error) {
+        if (error.message.includes('CORS')) {
+          log(`❌ CORS error: ${error.message}`, 'error');
+          showStatus('corsResult', `❌ CORS blocked: ${error.message}`, 'error');
+          document.getElementById('corsStatus').textContent = '❌ Blocked';
+          recordTest(false);
+        } else {
+          log(`⚠️ Request failed but not due to CORS: ${error.message}`, 'warning');
+          showStatus('corsResult', `⚠️ Request failed: ${error.message}`, 'warning');
+          document.getElementById('corsStatus').textContent = '⚠️ Unknown';
+          recordTest(false);
+        }
+      }
+    }
+
+    async function testPreflight() {
+      log('Testing CORS preflight (OPTIONS request)...', 'info');
+
+      try {
+        const response = await fetch(`${API_BASE}/api/products`, {
+          method: 'OPTIONS',
+          headers: {
+            'Access-Control-Request-Method': 'GET',
+            'Access-Control-Request-Headers': 'Content-Type,Authorization'
+          }
+        });
+
+        log(`✅ Preflight passed! Status: ${response.status}`, 'success');
+        log(`Allow-Methods: ${response.headers.get('access-control-allow-methods')}`, 'info');
+        log(`Allow-Headers: ${response.headers.get('access-control-allow-headers')}`, 'info');
+        showStatus('corsResult', '✅ CORS preflight successful', 'success');
+        recordTest(true);
+      } catch (error) {
+        log(`❌ Preflight failed: ${error.message}`, 'error');
+        showStatus('corsResult', `❌ Preflight failed: ${error.message}`, 'error');
+        recordTest(false);
+      }
+    }
+
+    async function testAuth() {
+      log('Testing authentication endpoint...', 'info');
+      showStatus('authResult', '⏳ Testing authentication...', 'info');
+
+      const token = document.getElementById('authToken').value.trim();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/user/me`, {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        });
+
+        if (response.status === 401) {
+          log(`✅ 401 Unauthorized (expected without valid token)`, 'success');
+          showStatus('authResult', '✅ Auth endpoint working (401 expected)', 'success');
+          document.getElementById('authStatus').textContent = '⚠️ Not Auth';
+          recordTest(true);
+        } else if (response.ok) {
+          const data = await response.json();
+          log(`✅ Authentication successful! User: ${JSON.stringify(data)}`, 'success');
+          showStatus('authResult', `✅ Authenticated: ${data.user?.email || 'User'}`, 'success');
+          document.getElementById('authStatus').textContent = '✅ Authenticated';
+          recordTest(true);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Auth test failed: ${error.message}`, 'error');
+        showStatus('authResult', `❌ Auth test failed: ${error.message}`, 'error');
+        document.getElementById('authStatus').textContent = '❌ Error';
+        recordTest(false);
+      }
+    }
+
+    async function testWishlist() {
+      log('Testing wishlist endpoint...', 'info');
+
+      const token = document.getElementById('authToken').value.trim();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/wishlist`, {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        });
+
+        if (response.status === 401) {
+          log(`✅ Wishlist returns 401 without auth (expected)`, 'success');
+          showStatus('authResult', '✅ Wishlist endpoint protected correctly', 'success');
+          recordTest(true);
+        } else if (response.ok) {
+          const data = await response.json();
+          log(`✅ Wishlist fetched: ${data.length} items`, 'success');
+          showStatus('authResult', `✅ Wishlist: ${data.length} items`, 'success');
+          recordTest(true);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Wishlist test failed: ${error.message}`, 'error');
+        showStatus('authResult', `❌ Wishlist test failed: ${error.message}`, 'error');
+        recordTest(false);
+      }
+    }
+
+    async function testCart() {
+      log('Testing cart endpoint...', 'info');
+
+      const token = document.getElementById('authToken').value.trim();
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/cart`, {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        });
+
+        if (response.status === 401) {
+          log(`✅ Cart returns 401 without auth (expected)`, 'success');
+          showStatus('authResult', '✅ Cart endpoint protected correctly', 'success');
+          recordTest(true);
+        } else if (response.ok) {
+          const data = await response.json();
+          log(`✅ Cart fetched: ${data.length} items`, 'success');
+          showStatus('authResult', `✅ Cart: ${data.length} items`, 'success');
+          recordTest(true);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Cart test failed: ${error.message}`, 'error');
+        showStatus('authResult', `❌ Cart test failed: ${error.message}`, 'error');
+        recordTest(false);
+      }
+    }
+
+    async function testSearch() {
+      log('Testing search endpoint...', 'info');
+      showStatus('searchResult', '⏳ Testing search...', 'info');
+
+      const query = document.getElementById('searchQuery').value.trim();
+
+      try {
+        const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&page=1&limit=20`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          log(`✅ Search successful! Found ${data.data?.totalProducts || 0} products`, 'success');
+          log(`Query: "${query}", Results: ${data.data?.products?.length || 0}`, 'info');
+          showStatus('searchResult', `✅ Search working: ${data.data?.totalProducts || 0} results`, 'success');
+          recordTest(true);
+        } else if (response.status === 404) {
+          log(`❌ Search endpoint not found (404)`, 'error');
+          log(`Check if the route is /search or /api/search`, 'warning');
+          showStatus('searchResult', '❌ Search endpoint not found (404)', 'error');
+          recordTest(false);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Search test failed: ${error.message}`, 'error');
+        showStatus('searchResult', `❌ Search failed: ${error.message}`, 'error');
+        recordTest(false);
+      }
+    }
+
+    async function testSearchPagination() {
+      log('Testing search pagination...', 'info');
+
+      const query = document.getElementById('searchQuery').value.trim();
+
+      try {
+        const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&page=2&limit=10&sortBy=relevance`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          log(`✅ Pagination test passed! Page 2, Limit 10`, 'success');
+          log(`Total pages: ${data.data?.totalPages}, Current: ${data.data?.page || 2}`, 'info');
+          showStatus('searchResult', '✅ Search pagination working', 'success');
+          recordTest(true);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        log(`❌ Pagination test failed: ${error.message}`, 'error');
+        showStatus('searchResult', `❌ Pagination failed: ${error.message}`, 'error');
+        recordTest(false);
+      }
+    }
+
+    async function runAllTests() {
+      log('='.repeat(60), 'info');
+      log('Running complete diagnostic test suite...', 'info');
+      log('='.repeat(60), 'info');
+      
+      testResults = { passed: 0, total: 0 };
+      updateSummary();
+
+      // Wait between tests to avoid rate limiting
+      const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+      await testBackendConnection();
+      await wait(500);
+      
+      await testBackendHealth();
+      await wait(500);
+      
+      await testCORS();
+      await wait(500);
+      
+      await testPreflight();
+      await wait(500);
+      
+      await testAuth();
+      await wait(500);
+      
+      await testWishlist();
+      await wait(500);
+      
+      await testCart();
+      await wait(500);
+      
+      await testSearch();
+      await wait(500);
+      
+      await testSearchPagination();
+      
+      log('='.repeat(60), 'info');
+      log(`✅ All tests complete! Passed: ${testResults.passed}/${testResults.total}`, 'success');
+      log('='.repeat(60), 'info');
+    }
+
+    // Run backend test on load
+    window.addEventListener('load', () => {
+      setTimeout(testBackendConnection, 1000);
+    });
+  </script>
+</body>
+</html>

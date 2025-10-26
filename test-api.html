@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #dc2626;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        h2 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .test-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        input, select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 8px 20px;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #b91c1c;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1f2937;
+            color: #f3f4f6;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .status.loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        label {
+            display: inline-block;
+            width: 100px;
+            font-weight: 500;
+            color: #4b5563;
+        }
+        .info {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #1e40af;
+            font-size: 14px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Snatchers Filter API Tester</h1>
+        
+        <div class="info">
+            <strong>ℹ️ Instructions:</strong> This tool helps you test the search/filter API directly. 
+            Make sure your backend is running on the configured port.
+        </div>
+
+        <div class="section">
+            <h2>⚙️ Configuration</h2>
+            <div class="test-row">
+                <label>Backend URL:</label>
+                <input type="text" id="backendUrl" value="http://localhost:5000" style="flex: 1;">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 Search Query</h2>
+            <div class="test-row">
+                <label>Search Term:</label>
+                <input type="text" id="searchQuery" placeholder="e.g., shoes, laptop, etc." style="flex: 1;">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Filters</h2>
+            <div class="test-row">
+                <label>Brands:</label>
+                <input type="text" id="brands" placeholder="e.g., Nike,Adidas" style="flex: 1;">
+                <small style="color: #6b7280;">(comma-separated)</small>
+            </div>
+            <div class="test-row">
+                <label>Categories:</label>
+                <input type="text" id="categories" placeholder="e.g., Shoes,Clothing" style="flex: 1;">
+                <small style="color: #6b7280;">(comma-separated)</small>
+            </div>
+            <div class="test-row">
+                <label>Price Min:</label>
+                <input type="number" id="priceMin" placeholder="0" style="width: 150px;">
+                <label style="width: auto; margin-left: 20px;">Price Max:</label>
+                <input type="number" id="priceMax" placeholder="10000" style="width: 150px;">
+            </div>
+            <div class="test-row">
+                <label>Min Rating:</label>
+                <select id="rating" style="width: 150px;">
+                    <option value="">Any</option>
+                    <option value="1">1+ Stars</option>
+                    <option value="2">2+ Stars</option>
+                    <option value="3">3+ Stars</option>
+                    <option value="4">4+ Stars</option>
+                </select>
+                <label style="width: auto; margin-left: 20px;">In Stock:</label>
+                <input type="checkbox" id="inStock">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Options</h2>
+            <div class="test-row">
+                <label>Sort By:</label>
+                <select id="sortBy" style="width: 200px;">
+                    <option value="relevance">Relevance</option>
+                    <option value="price_low_to_high">Price: Low to High</option>
+                    <option value="price_high_to_low">Price: High to Low</option>
+                    <option value="rating">Rating</option>
+                    <option value="popularity">Popularity</option>
+                    <option value="newest">Newest</option>
+                </select>
+                <label style="width: auto; margin-left: 20px;">Page:</label>
+                <input type="number" id="page" value="1" min="1" style="width: 80px;">
+                <label style="width: auto; margin-left: 20px;">Limit:</label>
+                <input type="number" id="limit" value="20" min="1" max="100" style="width: 80px;">
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button onclick="testSearch()" id="testBtn">🚀 Test Search API</button>
+            <button onclick="clearForm()" style="background: #6b7280; margin-left: 10px;">Clear Form</button>
+        </div>
+
+        <div class="section">
+            <h2>📋 Results <span id="statusIndicator"></span></h2>
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-label">Total Products</div>
+                    <div class="stat-value" id="totalProducts">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Current Page</div>
+                    <div class="stat-value" id="currentPage">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Pages</div>
+                    <div class="stat-value" id="totalPages">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Brands Found</div>
+                    <div class="stat-value" id="brandsCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Categories Found</div>
+                    <div class="stat-value" id="categoriesCount">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Response Time</div>
+                    <div class="stat-value" id="responseTime">0ms</div>
+                </div>
+            </div>
+            <div class="results" id="results">Click "Test Search API" to see results here...</div>
+        </div>
+
+        <div class="section">
+            <h2>🔗 Quick Test URLs</h2>
+            <button onclick="quickTest('all')">All Products</button>
+            <button onclick="quickTest('brand')" style="margin-left: 10px;">Filter by Brand</button>
+            <button onclick="quickTest('category')" style="margin-left: 10px;">Filter by Category</button>
+            <button onclick="quickTest('price')" style="margin-left: 10px;">Price Range</button>
+            <button onclick="quickTest('rating')" style="margin-left: 10px;">High Rating</button>
+        </div>
+    </div>
+
+    <script>
+        let lastRequestTime = 0;
+
+        async function testSearch() {
+            const backendUrl = document.getElementById('backendUrl').value;
+            const statusIndicator = document.getElementById('statusIndicator');
+            const resultsDiv = document.getElementById('results');
+            const testBtn = document.getElementById('testBtn');
+            const statsDiv = document.getElementById('stats');
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            
+            const query = document.getElementById('searchQuery').value;
+            if (query) params.append('q', query);
+
+            const brands = document.getElementById('brands').value;
+            if (brands) params.append('brands', brands);
+
+            const categories = document.getElementById('categories').value;
+            if (categories) params.append('categories', categories);
+
+            const priceMin = document.getElementById('priceMin').value;
+            if (priceMin) params.append('priceMin', priceMin);
+
+            const priceMax = document.getElementById('priceMax').value;
+            if (priceMax) params.append('priceMax', priceMax);
+
+            const rating = document.getElementById('rating').value;
+            if (rating) params.append('rating', rating);
+
+            const inStock = document.getElementById('inStock').checked;
+            if (inStock) params.append('inStock', 'true');
+
+            params.append('sortBy', document.getElementById('sortBy').value);
+            params.append('page', document.getElementById('page').value);
+            params.append('limit', document.getElementById('limit').value);
+
+            const url = `${backendUrl}/search?${params.toString()}`;
+
+            // Update UI
+            statusIndicator.innerHTML = '<span class="status loading">Loading...</span>';
+            resultsDiv.textContent = 'Sending request...\n\nURL: ' + url;
+            testBtn.disabled = true;
+            statsDiv.style.display = 'none';
+
+            lastRequestTime = Date.now();
+
+            try {
+                const response = await fetch(url);
+                const responseTime = Date.now() - lastRequestTime;
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    statusIndicator.innerHTML = '<span class="status success">✓ Success</span>';
+                    
+                    // Update stats
+                    document.getElementById('totalProducts').textContent = data.data.total || 0;
+                    document.getElementById('currentPage').textContent = data.data.page || 0;
+                    document.getElementById('totalPages').textContent = data.data.totalPages || 0;
+                    document.getElementById('brandsCount').textContent = data.data.aggregations?.brands?.length || 0;
+                    document.getElementById('categoriesCount').textContent = data.data.aggregations?.categories?.length || 0;
+                    document.getElementById('responseTime').textContent = responseTime + 'ms';
+                    statsDiv.style.display = 'grid';
+
+                    // Show full response
+                    resultsDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    statusIndicator.innerHTML = '<span class="status error">✗ Error</span>';
+                    resultsDiv.textContent = 'Error Response:\n\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                statusIndicator.innerHTML = '<span class="status error">✗ Network Error</span>';
+                resultsDiv.textContent = 'Network Error:\n\n' + error.message + 
+                    '\n\nMake sure your backend server is running at: ' + backendUrl;
+            } finally {
+                testBtn.disabled = false;
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('searchQuery').value = '';
+            document.getElementById('brands').value = '';
+            document.getElementById('categories').value = '';
+            document.getElementById('priceMin').value = '';
+            document.getElementById('priceMax').value = '';
+            document.getElementById('rating').value = '';
+            document.getElementById('inStock').checked = false;
+            document.getElementById('sortBy').value = 'relevance';
+            document.getElementById('page').value = '1';
+            document.getElementById('limit').value = '20';
+            document.getElementById('results').textContent = 'Form cleared. Ready for new test.';
+            document.getElementById('statusIndicator').innerHTML = '';
+            document.getElementById('stats').style.display = 'none';
+        }
+
+        function quickTest(type) {
+            clearForm();
+            switch(type) {
+                case 'all':
+                    // No filters
+                    break;
+                case 'brand':
+                    document.getElementById('brands').value = 'Nike';
+                    break;
+                case 'category':
+                    document.getElementById('categories').value = 'Shoes';
+                    break;
+                case 'price':
+                    document.getElementById('priceMin').value = '500';
+                    document.getElementById('priceMax').value = '2000';
+                    break;
+                case 'rating':
+                    document.getElementById('rating').value = '4';
+                    break;
+            }
+            testSearch();
+        }
+
+        // Allow Enter key to submit
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        testSearch();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

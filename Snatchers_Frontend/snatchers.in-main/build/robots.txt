@@ -1,0 +1,20 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /checkout/
+Disallow: /profile/
+Disallow: /orders/
+
+# Allow important pages
+Allow: /shop
+Allow: /product/
+Allow: /category/
+Allow: /search
+
+# Sitemap location
+Sitemap: https://snatchers.in/sitemap.xml

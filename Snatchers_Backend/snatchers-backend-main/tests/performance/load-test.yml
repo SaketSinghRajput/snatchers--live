@@ -1,0 +1,84 @@
+config:
+  target: 'http://localhost:5000'
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 50
+      name: "Load test"
+    - duration: 60
+      arrivalRate: 100
+      name: "Stress test"
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+
+scenarios:
+  - name: "Product browsing"
+    weight: 40
+    flow:
+      - get:
+          url: "/api/products"
+          capture:
+            - json: "$.products[0]._id"
+              as: "productId"
+      - get:
+          url: "/api/products/{{ productId }}"
+      - get:
+          url: "/api/products?category=Electronics"
+
+  - name: "Search functionality"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/search?q=laptop"
+      - get:
+          url: "/api/search?q=smartphone&category=Electronics"
+      - get:
+          url: "/api/search/suggestions?q=lap"
+
+  - name: "Cart operations"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - post:
+          url: "/api/cart/add"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            productId: "507f1f77bcf86cd799439011"
+            quantity: 1
+      - get:
+          url: "/api/cart"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+
+  - name: "User registration and profile"
+    weight: 10
+    flow:
+      - post:
+          url: "/api/auth/register"
+          json:
+            email: "newuser{{ $randomString() }}@example.com"
+            password: "password123"
+            name: "Test User"
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "test@example.com"
+            password: "password123"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+      - get:
+          url: "/api/user/profile"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
