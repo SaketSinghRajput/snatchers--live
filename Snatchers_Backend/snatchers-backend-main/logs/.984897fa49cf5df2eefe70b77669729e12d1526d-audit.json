@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 90
+    },
+    "auditLog": "C:\\Users\\amank\\OneDrive\\Desktop\\Documents\\snatchers--live\\Snatchers_Backend\\snatchers-backend-main\\logs\\.984897fa49cf5df2eefe70b77669729e12d1526d-audit.json",
+    "files": [
+        {
+            "date": 1761874889960,
+            "name": "C:\\Users\\amank\\OneDrive\\Desktop\\Documents\\snatchers--live\\Snatchers_Backend\\snatchers-backend-main\\logs\\security-2025-10-31.log",
+            "hash": "b8b7f0e7ee33220a9b75ce37a966438a5652178dedb70cd82329ec77a4534cf4"
+        }
+    ],
+    "hashType": "sha256"
+}
