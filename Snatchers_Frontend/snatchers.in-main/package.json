@@ -24,6 +24,7 @@
     "react-router-dom": "^7.6.1",
     "react-toastify": "^11.0.5",
     "remark-gfm": "^4.0.1",
+    "snatchers-monorepo-root": "file:../..",
     "socket.io-client": "^4.8.1",
     "swiper": "^11.2.8",
     "web-vitals": "^2.1.4",

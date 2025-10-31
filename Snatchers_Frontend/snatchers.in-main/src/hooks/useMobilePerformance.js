@@ -291,7 +291,7 @@ const useMobilePerformance = () => {
   // Calculate performance score when metrics change
   useEffect(() => {
     calculatePerformanceScore();
-  }, [calculatePerformanceScore]);
+  }, []);
 
   // Performance optimization utilities
   const optimizeForDevice = useCallback(() => {
@@ -319,9 +319,9 @@ const useMobilePerformance = () => {
   return {
     metrics,
     isLowEndDevice,
-    recommendations: getRecommendations(),
+    recommendations: getRecommendations,
     optimizeForDevice,
-    shouldUsePerformanceMode: shouldUsePerformanceMode(),
+    shouldUsePerformanceMode,
     
     // Utility functions
     measureNow: () => {
