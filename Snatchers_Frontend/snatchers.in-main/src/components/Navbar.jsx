@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   FaSearch,
   FaShoppingBag,
@@ -7,13 +7,13 @@ import {
   FaBars,
   FaTimes,
   FaHeart,
-} from 'react-icons/fa';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import { Link, useNavigate } from 'react-router-dom';
-import api from '../api';
-import { getGuestCart } from '../utils/guestCart';
-import CartIcon from './Cart/CartIcon';
-import NotificationBell from './Notifications/NotificationBell';
+} from "react-icons/fa";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../api";
+import { getGuestCart } from "../utils/guestCart";
+import CartIcon from "./Cart/CartIcon";
+import NotificationBell from "./Notifications/NotificationBell";
 
 const Navbar = () => {
   const { currentUser, getSession, logout } = useAuth();
@@ -23,7 +23,7 @@ const Navbar = () => {
 
   const [wishlistCount, setWishlistCount] = useState(0);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -33,13 +33,13 @@ const Navbar = () => {
 
     if (value.length > 0) {
       try {
-    const res = await api.get(`/search`, {
-            params: { q: value }
-          });
+        const res = await api.get(`/search`, {
+          params: { q: value },
+        });
         setSearchResults(res.data?.data?.products || []);
         setShowSuggestions(true);
       } catch (err) {
-        console.error('Search failed:', err);
+        console.error("Search failed:", err);
         setSearchResults([]);
         setShowSuggestions(false);
       }
@@ -53,16 +53,16 @@ const Navbar = () => {
   useEffect(() => {
     const handler = (event) => {
       if (
-        event.target.closest('.search-suggestions') === null &&
-        event.target.closest('.product-search-input') === null
+        event.target.closest(".search-suggestions") === null &&
+        event.target.closest(".product-search-input") === null
       ) {
         setShowSuggestions(false);
       }
     };
     if (showSuggestions) {
-      document.addEventListener('mousedown', handler);
+      document.addEventListener("mousedown", handler);
     }
-    return () => document.removeEventListener('mousedown', handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [showSuggestions]);
 
   useEffect(() => {
@@ -73,8 +73,8 @@ const Navbar = () => {
       else setShowMobileSearch(true);
       lastScrollY = window.scrollY;
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -87,10 +87,11 @@ const Navbar = () => {
         const resolveToken = async () => {
           try {
             // If currentUser itself exposes a helper getIdToken (some mocks may), use it
-            if (currentUser && typeof currentUser.getIdToken === 'function') {
+            if (currentUser && typeof currentUser.getIdToken === "function") {
               const maybe = await currentUser.getIdToken();
-              if (typeof maybe === 'string') return maybe;
-              if (maybe && typeof maybe.getJwtToken === 'function') return maybe.getJwtToken();
+              if (typeof maybe === "string") return maybe;
+              if (maybe && typeof maybe.getJwtToken === "function")
+                return maybe.getJwtToken();
             }
           } catch (e) {}
 
@@ -98,38 +99,40 @@ const Navbar = () => {
             // If currentUser has a session object (CognitoAuth sets { username, session }), use that
             if (currentUser && currentUser.session) {
               const sess = currentUser.session;
-              if (sess && typeof sess.getIdToken === 'function') {
+              if (sess && typeof sess.getIdToken === "function") {
                 const id = sess.getIdToken();
-                if (id && typeof id.getJwtToken === 'function') return id.getJwtToken();
+                if (id && typeof id.getJwtToken === "function")
+                  return id.getJwtToken();
               }
             }
           } catch (e) {}
 
           try {
             // Try the provided getSession() helper from the auth context
-            if (typeof getSession === 'function') {
+            if (typeof getSession === "function") {
               const s = await getSession();
-              if (s && typeof s.getIdToken === 'function') {
+              if (s && typeof s.getIdToken === "function") {
                 const id = s.getIdToken();
-                if (id && typeof id.getJwtToken === 'function') return id.getJwtToken();
+                if (id && typeof id.getJwtToken === "function")
+                  return id.getJwtToken();
               }
             }
           } catch (e) {}
 
           try {
-            const stored = localStorage.getItem('token');
+            const stored = localStorage.getItem("token");
             if (stored) return stored;
           } catch (e) {}
           return null;
         };
 
         const token = await resolveToken();
-        if (!token) throw new Error('No auth token available');
+        if (!token) throw new Error("No auth token available");
 
         const wishlistRes = await api.get(`/api/wishlist`);
         setWishlistCount(wishlistRes.data.length || 0);
       } catch (err) {
-        console.error('Error fetching user data:', err);
+        console.error("Error fetching user data:", err);
       }
     };
 
@@ -144,7 +147,10 @@ const Navbar = () => {
       try {
         await fetchUserData();
       } catch (e) {
-        console.warn('fetchUserData failed, attempting fallback session check', e);
+        console.warn(
+          "fetchUserData failed, attempting fallback session check",
+          e
+        );
         // attempt to refresh session and retry
         try {
           const s = await getSession();
@@ -154,7 +160,7 @@ const Navbar = () => {
           }
           await fetchUserData();
         } catch (innerErr) {
-          console.error('Session fallback failed:', innerErr);
+          console.error("Session fallback failed:", innerErr);
         }
       }
     })();
@@ -162,8 +168,11 @@ const Navbar = () => {
 
   const handleUserClick = (e) => {
     e.preventDefault();
-    if (!currentUser) return navigate('/login');
-    return navigate('/profile');
+    const token = localStorage.getItem("token");
+
+    if (!token) return navigate("/login");
+
+    return navigate("/profile");
   };
 
   const handleProductClick = (productId) => {
@@ -173,9 +182,11 @@ const Navbar = () => {
 
   // Search Suggestions Dropdown
   const renderSearchSuggestions = () =>
-    (searchQuery && showSuggestions) ? (
-      <div className="search-suggestions absolute left-0 right-0 top-full z-50 bg-white border border-gray-200 rounded-b-xl shadow-lg"
-        style={{ minWidth: '100%' }}>
+    searchQuery && showSuggestions ? (
+      <div
+        className="search-suggestions absolute left-0 right-0 top-full z-50 bg-white border border-gray-200 rounded-b-xl shadow-lg"
+        style={{ minWidth: "100%" }}
+      >
         {searchResults.length > 0 ? (
           <ul>
             {searchResults.map((product) => (
@@ -196,10 +207,14 @@ const Navbar = () => {
                     />
                   )}
                   <div className="flex flex-col min-w-0">
-                    <span className="font-medium text-gray-800 truncate">{product.title}</span>
+                    <span className="font-medium text-gray-800 truncate">
+                      {product.title}
+                    </span>
                     {product.badgeText && (
                       <span
-                        className={`mt-0.5 text-xs px-2 py-0.5 rounded ${product.badgeClass || 'bg-red-500 text-white'}`}
+                        className={`mt-0.5 text-xs px-2 py-0.5 rounded ${
+                          product.badgeClass || "bg-red-500 text-white"
+                        }`}
                       >
                         {product.badgeText}
                       </span>
@@ -242,7 +257,8 @@ const Navbar = () => {
                     value={searchQuery}
                     onChange={handleSearchChange}
                     onFocus={() => {
-                      if (searchResults.length > 0 || searchQuery.length > 0) setShowSuggestions(true);
+                      if (searchResults.length > 0 || searchQuery.length > 0)
+                        setShowSuggestions(true);
                     }}
                   />
                 </div>
@@ -251,7 +267,10 @@ const Navbar = () => {
             </div>
 
             <div className="flex items-center space-x-6 ml-auto">
-              <Link to="/wishlist" className="relative hover:text-indigo-600 text-2xl">
+              <Link
+                to="/wishlist"
+                className="relative hover:text-indigo-600 text-2xl"
+              >
                 <FaHeart />
                 {wishlistCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1 rounded-full">
@@ -260,7 +279,9 @@ const Navbar = () => {
                 )}
               </Link>
               <CartIcon className="hover:text-indigo-600" />
-              {currentUser && <NotificationBell className="hover:text-indigo-600" />}
+              {currentUser && (
+                <NotificationBell className="hover:text-indigo-600" />
+              )}
               <button
                 onClick={handleUserClick}
                 className="hover:text-indigo-600 text-2xl"
@@ -307,7 +328,7 @@ const Navbar = () => {
               <FaHeart className="text-lg" />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] h-[18px] flex items-center justify-center">
-                  {wishlistCount > 99 ? '99+' : wishlistCount}
+                  {wishlistCount > 99 ? "99+" : wishlistCount}
                 </span>
               )}
             </Link>
@@ -325,7 +346,11 @@ const Navbar = () => {
               className="tap-target p-2"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
+              {isMobileMenuOpen ? (
+                <FaTimes className="text-xl" />
+              ) : (
+                <FaBars className="text-xl" />
+              )}
             </button>
           </div>
         </div>
@@ -345,7 +370,8 @@ const Navbar = () => {
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onFocus={() => {
-                    if (searchResults.length > 0 || searchQuery.length > 0) setShowSuggestions(true);
+                    if (searchResults.length > 0 || searchQuery.length > 0)
+                      setShowSuggestions(true);
                   }}
                 />
               </div>
@@ -358,15 +384,15 @@ const Navbar = () => {
       <div
         className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity duration-300 ${
           isMobileMenuOpen
-            ? 'opacity-100 pointer-events-auto'
-            : 'opacity-0 pointer-events-none'
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
         onClick={() => setIsMobileMenuOpen(false)}
       ></div>
 
       <div
         className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ease-in-out ${
-          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between p-4 border-b">
@@ -376,12 +402,24 @@ const Navbar = () => {
           </button>
         </div>
         <nav className="flex flex-col p-4 space-y-4 text-gray-700 text-md font-thin">
-          <Link to="/" className="hover:text-indigo-600">Home</Link>
-          <Link to="/shop" className="hover:text-indigo-600">Shop</Link>
-          <Link to="/mens" className="hover:text-indigo-600">Men</Link>
-          <Link to="/womens" className="hover:text-indigo-600">Women</Link>
-          <Link to="/about" className="hover:text-indigo-600">About Us</Link>
-          <Link to="/contact" className="hover:text-indigo-600">Contact Us</Link>
+          <Link to="/" className="hover:text-indigo-600">
+            Home
+          </Link>
+          <Link to="/shop" className="hover:text-indigo-600">
+            Shop
+          </Link>
+          <Link to="/mens" className="hover:text-indigo-600">
+            Men
+          </Link>
+          <Link to="/womens" className="hover:text-indigo-600">
+            Women
+          </Link>
+          <Link to="/about" className="hover:text-indigo-600">
+            About Us
+          </Link>
+          <Link to="/contact" className="hover:text-indigo-600">
+            Contact Us
+          </Link>
         </nav>
       </div>
     </>

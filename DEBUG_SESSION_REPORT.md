@@ -1,4 +1,5 @@
 # Development Server Debug Session Report
+
 **Date:** October 24, 2025  
 **Workspace:** Snatchers (Full-stack e-commerce application)
 
@@ -16,7 +17,9 @@ Successfully debugged and fixed **4 critical startup errors** preventing the dev
 ## Issues Fixed
 
 ### 1. **Missing Auth Export: `isAuthenticated`**
+
 **Error:**
+
 ```
 SyntaxError: The requested module '../middleware/auth.js' does not provide an export named 'isAuthenticated'
 ```
@@ -26,6 +29,7 @@ Multiple route files (`routes/wishlist.js`, `routes/cart.js`, etc.) imported `is
 
 **Fix:**  
 Added alias exports in `middleware/auth.js`:
+
 ```javascript
 export const isAuthenticated = authenticateToken;
 export const auth = authenticateToken;
@@ -33,12 +37,15 @@ export default authenticateToken;
 ```
 
 **Files Modified:**
+
 - `Snatchers_Backend/snatchers-backend-main/middleware/auth.js`
 
 ---
 
 ### 2. **Nodemailer API Error in NotificationService**
+
 **Error:**
+
 ```
 TypeError: nodemailer.createTransporter is not a function
 ```
@@ -48,21 +55,27 @@ Incorrect method name - nodemailer uses `createTransport` not `createTransporter
 
 **Fix:**  
 Changed method call from:
+
 ```javascript
 this.transporter = nodemailer.createTransporter({...})
 ```
+
 to:
+
 ```javascript
 this.transporter = nodemailer.createTransport({...})
 ```
 
 **Files Modified:**
+
 - `Snatchers_Backend/snatchers-backend-main/services/NotificationService.js`
 
 ---
 
 ### 3. **Missing Email Provider Configuration**
+
 **Error:**
+
 ```
 Error: No email provider configured
     at EmailService.selectActiveProvider
@@ -73,19 +86,20 @@ Error: No email provider configured
 
 **Fix:**  
 Added mock SMTP provider for development when no external providers are configured:
+
 ```javascript
 initializeProviders() {
   // ... existing provider initialization ...
-  
+
   // If no provider configured, provide a local mock SMTP provider for development
   if (!this.providers.smtp && !this.providers.sendgrid && !this.providers.mailgun) {
     console.warn('[EmailService] No external email provider configured; using mock SMTP provider for development (emails will not be sent).');
     this.providers.smtp = {
       sendMail: async (mailOptions) => {
-        console.log('[EmailService Mock] Would send email:', {
-          to: mailOptions.to,
-          subject: mailOptions.subject
-        });
+        // console.log('[EmailService Mock] Would send email:', {
+        //   to: mailOptions.to,
+        //   subject: mailOptions.subject
+        // });
         return { messageId: 'dev-mock-' + Date.now() };
       }
     };
@@ -94,7 +108,7 @@ initializeProviders() {
 
 selectActiveProvider() {
   // ... existing logic ...
-  
+
   // Fallback - should never happen after mock provider
   console.warn('[EmailService] No email provider configured; using mock mode');
   this.providers.smtp = {
@@ -105,12 +119,15 @@ selectActiveProvider() {
 ```
 
 **Files Modified:**
+
 - `Snatchers_Backend/snatchers-backend-main/services/EmailService.js`
 
 ---
 
 ### 4. **Port 3000 Already in Use**
+
 **Error:**
+
 ```
 Something is already running on port 3000.
 ```
@@ -120,6 +137,7 @@ A previous node process (PID 29208) was still listening on port 3000, blocking t
 
 **Fix:**  
 Identified and terminated the conflicting process:
+
 ```powershell
 netstat -ano | findstr ":3000"
 taskkill /PID 29208 /F
@@ -132,6 +150,7 @@ taskkill /PID 29208 /F
 After fixes, both servers started successfully:
 
 ### Backend Logs:
+
 ```
 ✅ Configuration validated for development environment
 ✅ MongoDB connected
@@ -141,6 +160,7 @@ After fixes, both servers started successfully:
 ```
 
 ### Frontend Logs:
+
 ```
 Compiled successfully!
 
@@ -155,18 +175,21 @@ You can now view snatchers.in in the browser.
 ## Development Server Commands
 
 ### Start both servers (from workspace root):
+
 ```powershell
 cd f:\Projects\abhi\live\Snatchers
 npm run dev
 ```
 
 ### Start backend only:
+
 ```powershell
 cd f:\Projects\abhi\live\Snatchers
 npm run dev:backend
 ```
 
 ### Start frontend only:
+
 ```powershell
 cd f:\Projects\abhi\live\Snatchers
 npm run dev:frontend
@@ -177,6 +200,7 @@ npm run dev:frontend
 ## Warnings to Address (Non-Critical)
 
 ### Backend Warnings:
+
 1. **Mongoose Duplicate Index Warnings** - Multiple schemas have duplicate index definitions on fields like `slug`, `shareToken`, `disputeId`, and `name`. These should be cleaned up in model definitions.
 
 2. **COGNITO_REDIRECT_URI Mismatch** - The `FRONTEND_URL` (https://snatchers.in) is not in the `COGNITO_REDIRECT_URI` list. This is allowed in development but may cause issues with authentication flows.
@@ -186,6 +210,7 @@ npm run dev:frontend
 4. **High Memory Usage Alert** - Backend reported 91.9% memory usage. Consider monitoring and optimizing if this persists.
 
 ### Frontend Warnings:
+
 1. **Webpack Dev Server Deprecation** - Using deprecated `onAfterSetupMiddleware` and `onBeforeSetupMiddleware` options. Should migrate to `setupMiddlewares` in webpack config.
 
 ---
@@ -195,23 +220,27 @@ npm run dev:frontend
 ### Backend API Endpoints to Test:
 
 1. **Health Check**
+
    ```
    GET http://localhost:5000/health
    ```
 
 2. **Products**
+
    ```
    GET http://localhost:5000/api/products
    GET http://localhost:5000/api/products/:id
    ```
 
 3. **Cart** (requires authentication)
+
    ```
    GET http://localhost:5000/api/cart
    POST http://localhost:5000/api/cart/:productId
    ```
 
 4. **Orders** (requires authentication)
+
    ```
    GET http://localhost:5000/api/order
    POST http://localhost:5000/api/order
@@ -272,6 +301,7 @@ Navigate to http://localhost:3000 and test these routes:
 The following environment variables may need to be configured for full functionality:
 
 ### Backend (.env):
+
 ```env
 # Database
 MONGODB_URI=mongodb://localhost:27017/snatchers

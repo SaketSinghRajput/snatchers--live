@@ -2,10 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../UI/ProductCard";
 import { motion } from "framer-motion";
-import api from '../api';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import { guestCartIncludes, addGuestCartItem, removeGuestCartItem } from '../utils/guestCart';
-import productsFallback from '../Data/ProductData';
+import api from "../api";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import {
+  guestCartIncludes,
+  addGuestCartItem,
+  removeGuestCartItem,
+} from "../utils/guestCart";
+import productsFallback from "../Data/ProductData";
+import { useCart } from "../contexts/CartContext.jsx";
 
 const Womens = () => {
   const [products, setProducts] = useState([]);
@@ -16,6 +21,7 @@ const Womens = () => {
   const { getSession } = useAuth();
   const [usedFallback, setUsedFallback] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const { addToCart, removeFromCart } = useCart();
 
   const placeholderImg =
     "https://redthread.uoregon.edu/files/original/affd16fd5264cab9197da4cd1a996f820e601ee4.png";
@@ -23,17 +29,23 @@ const Womens = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const session = await getSession();
-        
-        // Always fetch products (no auth required)
+        // ✅ Get token from localStorage
+        const token = localStorage.getItem("token");
+        const isAuthenticated = !!token;
+        setToken(isAuthenticated);
+
+        // ✅ Always fetch products (public)
         try {
           const productsRes = await api.get(`/api/products`);
           setProducts(productsRes.data);
         } catch (err) {
-          console.warn('Womens: product API failed, using local fallback', err?.message || err);
+          console.warn(
+            "Womens: product API failed, using local fallback",
+            err?.message || err
+          );
           setUsedFallback(true);
           setErrorMsg(err?.message || String(err));
-          const local = productsFallback.map(p => ({
+          const local = productsFallback.map((p) => ({
             _id: p._id || p.id?.toString?.() || `${p.title}-${Math.random()}`,
             title: p.title,
             price: p.price,
@@ -48,29 +60,8 @@ const Womens = () => {
           setProducts(local);
         }
 
-        // Only fetch user-specific data if logged in
-        if (session) {
-          let idToken = null;
-          try {
-            if (typeof session.getIdToken === 'function') {
-              const maybe = session.getIdToken();
-              idToken = typeof maybe.getJwtToken === 'function' ? maybe.getJwtToken() : (typeof maybe === 'string' ? maybe : null);
-            }
-          } catch (e) {}
-          if (!idToken) {
-            try {
-              const s2 = await getSession();
-              if (s2 && typeof s2.getIdToken === 'function') {
-                const id = s2.getIdToken();
-                idToken = typeof id.getJwtToken === 'function' ? id.getJwtToken() : (typeof id === 'string' ? id : null);
-              }
-            } catch (e) {}
-          }
-          if (!idToken) {
-            try { idToken = localStorage.getItem('token'); } catch (e) { /* ignore */ }
-          }
-          if (idToken) setToken(idToken);
-
+        // ✅ If logged in, fetch wishlist and cart
+        if (isAuthenticated) {
           try {
             const [wishlistRes, cartRes] = await Promise.all([
               api.get(`/api/wishlist`),
@@ -87,13 +78,15 @@ const Womens = () => {
             const cartIds = cartRes.data.map((item) => item.product._id);
             setCart(cartIds);
           } catch (userDataErr) {
-            console.log("User data fetch failed (user might not have cart/wishlist yet):", userDataErr);
-            // Set empty arrays for non-logged in users
+            console.log(
+              "User data fetch failed (user might not have cart/wishlist yet):",
+              userDataErr
+            );
             setWishlist([]);
             setCart([]);
           }
         } else {
-          // Set empty arrays for non-logged in users
+          // Not logged in → clear personalized data
           setWishlist([]);
           setCart([]);
         }
@@ -103,28 +96,28 @@ const Womens = () => {
     };
 
     fetchData();
-  }, [getSession]);
+  }, []); // No getSession dependency anymore
 
   const toggleWishlist = async (e, productId) => {
     e?.stopPropagation?.();
     if (!token) {
-      navigate('/login');
+      navigate("/login");
       return;
     }
 
     const isWishlisted = wishlist.includes(productId);
-  const url = `/api/wishlist/${productId}`;
+    const url = `/api/wishlist/${productId}`;
 
     try {
-        if (isWishlisted) {
+      if (isWishlisted) {
         await api.delete(url);
         setWishlist((prev) => prev.filter((id) => id !== productId));
         // notify other parts of the app that wishlist changed
-        window.dispatchEvent(new Event('wishlist:changed'));
+        window.dispatchEvent(new Event("wishlist:changed"));
       } else {
         await api.post(url);
         setWishlist((prev) => [...prev, productId]);
-        window.dispatchEvent(new Event('wishlist:changed'));
+        window.dispatchEvent(new Event("wishlist:changed"));
       }
     } catch (err) {
       console.error("Error updating wishlist:", err);
@@ -134,6 +127,7 @@ const Womens = () => {
   const toggleCart = async (e, productId) => {
     e?.stopPropagation?.();
     const isInCart = cart.includes(productId) || guestCartIncludes(productId);
+    console.log(isInCart, token);
 
     if (token) {
       const url = `/api/cart/${productId}`;
@@ -144,6 +138,24 @@ const Womens = () => {
         } else {
           await api.post(url);
           setCart((prev) => [...prev, productId]);
+
+          const [wishlistRes, cartRes] = await Promise.all([
+            api.get(`/api/wishlist`),
+            api.get(`/api/cart`),
+          ]);
+
+          const wishlistedIds = wishlistRes.data.map((item) =>
+            typeof item === "object" && item.productId
+              ? item.productId._id || item.productId
+              : item._id || item
+          );
+          setWishlist(wishlistedIds);
+
+          const cartIds = cartRes.data.map((item) => item.product._id);
+          const product = products.find((p) => p._id === productId);
+
+          await addToCart(product);
+          setCart(cartIds);
         }
       } catch (err) {
         console.error("Error updating cart:", err);
@@ -157,12 +169,14 @@ const Womens = () => {
         removeGuestCartItem(productId);
         setCart((prev) => prev.filter((id) => id !== productId));
       } else {
-        const prod = products.find((p) => String(p._id) === String(productId)) || { _id: productId };
+        const prod = products.find(
+          (p) => String(p._id) === String(productId)
+        ) || { _id: productId };
         addGuestCartItem(prod);
         setCart((prev) => Array.from(new Set([...prev, productId])));
       }
     } catch (err) {
-      console.error('Guest cart update failed', err);
+      console.error("Guest cart update failed", err);
     }
   };
 
@@ -175,7 +189,8 @@ const Womens = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {usedFallback && (
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded">
-            Using local product data because the product API failed or is unreachable. <div className="text-xs text-gray-600">{errorMsg}</div>
+            Using local product data because the product API failed or is
+            unreachable. <div className="text-xs text-gray-600">{errorMsg}</div>
           </div>
         )}
         {/* Hero Section */}

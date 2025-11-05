@@ -1,45 +1,54 @@
-import React, { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useCart } from '../../contexts/CartContext';
-import { useNavigate } from 'react-router-dom';
-import { X, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react';
+import React, { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useCart } from "../../contexts/CartContext";
+import { useNavigate } from "react-router-dom";
+import { X, ShoppingBag, Plus, Minus, Trash2 } from "lucide-react";
 
 const CartDrawer = () => {
-  const { 
-    isDrawerOpen, 
-    setDrawerOpen, 
-    cartItems, 
-    totalPrice, 
+  const {
+    isDrawerOpen,
+    setDrawerOpen,
+    cartItems,
+    totalPrice,
     totalItems,
-    updateQuantity, 
+    updateQuantity,
     removeFromCart,
-    loading 
+    loading,
   } = useCart();
+  console.log({ cartItems });
   const navigate = useNavigate();
 
   // Close drawer on escape key
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setDrawerOpen(false);
       }
     };
 
     if (isDrawerOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
     };
   }, [isDrawerOpen, setDrawerOpen]);
 
-  const handleQuantityChange = async (productId, newQuantity, selectedVariant) => {
+  const handleQuantityChange = async (
+    productId,
+    newQuantity,
+    selectedVariant
+  ) => {
     if (newQuantity < 1) return;
-    
-    const result = await updateQuantity(productId, newQuantity, selectedVariant);
+
+    const result = await updateQuantity(
+      productId,
+      newQuantity,
+      selectedVariant
+    );
     if (!result.success && result.availableQuantity !== undefined) {
       alert(`Only ${result.availableQuantity} items available in stock`);
     }
@@ -51,7 +60,7 @@ const CartDrawer = () => {
 
   const handleCheckout = () => {
     setDrawerOpen(false);
-    navigate('/cart');
+    navigate("/cart");
   };
 
   const handleContinueShopping = () => {
@@ -73,10 +82,10 @@ const CartDrawer = () => {
 
           {/* Drawer */}
           <motion.div
-            initial={{ x: '100%' }}
+            initial={{ x: "100%" }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl z-50 flex flex-col"
           >
             {/* Header */}
@@ -121,8 +130,10 @@ const CartDrawer = () => {
                 <div className="p-4 space-y-4">
                   {cartItems.map((item) => {
                     const product = item.product || item;
-                    const itemKey = `${product._id}-${JSON.stringify(item.selectedVariant)}`;
-                    
+                    const itemKey = `${product._id}-${JSON.stringify(
+                      item.selectedVariant
+                    )}`;
+
                     return (
                       <motion.div
                         key={itemKey}
@@ -132,7 +143,7 @@ const CartDrawer = () => {
                         {/* Product Image */}
                         <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
                           <img
-                            src={product.images?.[0] || '/placeholder.png'}
+                            src={product.images?.[0] || "/placeholder.png"}
                             alt={product.title}
                             className="w-full h-full object-cover"
                           />
@@ -143,39 +154,43 @@ const CartDrawer = () => {
                           <h4 className="font-medium text-sm truncate">
                             {product.title}
                           </h4>
-                          
+
                           {item.selectedVariant && (
                             <p className="text-xs text-gray-500 mt-1">
-                              {Object.entries(item.selectedVariant).map(([key, value]) => 
-                                `${key}: ${value}`
-                              ).join(', ')}
+                              {Object.entries(item.selectedVariant)
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join(", ")}
                             </p>
                           )}
 
                           <div className="flex items-center justify-between mt-2">
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => handleQuantityChange(
-                                  product._id, 
-                                  (item.quantity || 1) - 1, 
-                                  item.selectedVariant
-                                )}
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    product._id,
+                                    (item.quantity || 1) - 1,
+                                    item.selectedVariant
+                                  )
+                                }
                                 disabled={loading || (item.quantity || 1) <= 1}
                                 className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
                               >
                                 <Minus className="w-3 h-3" />
                               </button>
-                              
+
                               <span className="text-sm font-medium min-w-[2rem] text-center">
                                 {item.quantity || 1}
                               </span>
-                              
+
                               <button
-                                onClick={() => handleQuantityChange(
-                                  product._id, 
-                                  (item.quantity || 1) + 1, 
-                                  item.selectedVariant
-                                )}
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    product._id,
+                                    (item.quantity || 1) + 1,
+                                    item.selectedVariant
+                                  )
+                                }
                                 disabled={loading}
                                 className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
                               >
@@ -184,7 +199,12 @@ const CartDrawer = () => {
                             </div>
 
                             <button
-                              onClick={() => handleRemoveItem(product._id, item.selectedVariant)}
+                              onClick={() =>
+                                handleRemoveItem(
+                                  product._id,
+                                  item.selectedVariant
+                                )
+                              }
                               disabled={loading}
                               className="p-1 text-red-500 hover:bg-red-50 rounded disabled:opacity-50"
                             >
@@ -194,11 +214,18 @@ const CartDrawer = () => {
 
                           <div className="mt-2">
                             <span className="font-semibold text-sm">
-                              ₹{((product.offerPrice || product.price) * (item.quantity || 1)).toLocaleString()}
+                              ₹
+                              {(
+                                (product.offerPrice || product.price) *
+                                (item.quantity || 1)
+                              ).toLocaleString()}
                             </span>
                             {product.offerPrice && (
                               <span className="text-xs text-gray-500 line-through ml-2">
-                                ₹{(product.price * (item.quantity || 1)).toLocaleString()}
+                                ₹
+                                {(
+                                  product.price * (item.quantity || 1)
+                                ).toLocaleString()}
                               </span>
                             )}
                           </div>
@@ -228,7 +255,7 @@ const CartDrawer = () => {
                   >
                     View Cart & Checkout
                   </button>
-                  
+
                   <button
                     onClick={handleContinueShopping}
                     className="w-full border border-gray-300 py-2 rounded-md hover:bg-gray-50 transition-colors"

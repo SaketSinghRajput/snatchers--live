@@ -1,11 +1,13 @@
-import express from 'express';
-import signature from 'cookie-signature';
-import cookie from 'cookie';
-import { CognitoJwtVerifier } from 'aws-jwt-verify';
-import User from '../models/User.js';
-import { OAuth2Client } from 'google-auth-library';
-import bcrypt from 'bcrypt';
+import express from "express";
+import signature from "cookie-signature";
+import cookie from "cookie";
+import { CognitoJwtVerifier } from "aws-jwt-verify";
+import User from "../models/User.js";
+import { OAuth2Client } from "google-auth-library";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
+const JWT_EXPIRES_IN = "7d";
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const router = express.Router();
@@ -17,18 +19,21 @@ function setSessionCookie(req, res) {
     // to the current session id, avoid setting another Set-Cookie header to
     // prevent duplicate cookies.
     try {
-      const rawCookie = req.headers && req.headers.cookie ? req.headers.cookie : '';
+      const rawCookie =
+        req.headers && req.headers.cookie ? req.headers.cookie : "";
       if (rawCookie) {
         const parsed = cookie.parse(rawCookie);
-        const existing = parsed['connect.sid'];
+        const existing = parsed["connect.sid"];
         if (existing && req.sessionID) {
           let sid = existing;
-          if (sid.startsWith('s:')) sid = sid.slice(2);
-          const dot = sid.indexOf('.');
+          if (sid.startsWith("s:")) sid = sid.slice(2);
+          const dot = sid.indexOf(".");
           if (dot > 0) sid = sid.slice(0, dot);
           if (sid === String(req.sessionID)) {
             // Already present and matches current session id — nothing to do
-            console.log('[Auth] setSessionCookie: existing cookie matches sessionID — skipping Set-Cookie');
+            console.log(
+              "[Auth] setSessionCookie: existing cookie matches sessionID — skipping Set-Cookie"
+            );
             return;
           }
         }
@@ -36,71 +41,100 @@ function setSessionCookie(req, res) {
     } catch (e) {
       // non-fatal; continue to set cookie below
     }
-    const secureFlag = req.secure || (req.headers && req.headers['x-forwarded-proto'] === 'https');
-    const sessionCookieDays = parseInt(process.env.SESSION_COOKIE_DAYS || '', 10);
-    const defaultCookieDays = Number.isFinite(sessionCookieDays) ? sessionCookieDays : 30;
+    const secureFlag =
+      req.secure ||
+      (req.headers && req.headers["x-forwarded-proto"] === "https");
+    const sessionCookieDays = parseInt(
+      process.env.SESSION_COOKIE_DAYS || "",
+      10
+    );
+    const defaultCookieDays = Number.isFinite(sessionCookieDays)
+      ? sessionCookieDays
+      : 30;
     const cookieMaxAge = process.env.SESSION_MAX_AGE_MS
       ? parseInt(process.env.SESSION_MAX_AGE_MS, 10)
       : 1000 * 60 * 60 * 24 * defaultCookieDays;
-    const sameSite = process.env.SESSION_SAME_SITE || (secureFlag ? 'none' : 'lax');
+    const sameSite =
+      process.env.SESSION_SAME_SITE || (secureFlag ? "none" : "lax");
     const cookieOptions = {
       httpOnly: true,
       secure: secureFlag,
       sameSite,
       maxAge: cookieMaxAge,
     };
-    if (process.env.SESSION_COOKIE_DOMAIN) cookieOptions.domain = process.env.SESSION_COOKIE_DOMAIN;
-    const cookieName = process.env.SESSION_COOKIE_NAME || 'connect.sid';
+    if (process.env.SESSION_COOKIE_DOMAIN)
+      cookieOptions.domain = process.env.SESSION_COOKIE_DOMAIN;
+    const cookieName = process.env.SESSION_COOKIE_NAME || "connect.sid";
     // express-session signs cookies using the session secret. If the session
     // middleware is configured with a secret, sign the cookie value the same way
     // so that direct lookups using the cookie value (without the 's:' prefix)
     // behave as expected by connect-mongo.
-    const sessionSecret = process.env.SESSION_SECRET || 'some secret';
+    const sessionSecret = process.env.SESSION_SECRET || "some secret";
     let valueToSet = req.sessionID;
     try {
       // cookie-signature expects a string and returns 's:...' prefixed value
-      valueToSet = 's:' + signature.sign(String(req.sessionID), sessionSecret);
+      valueToSet = "s:" + signature.sign(String(req.sessionID), sessionSecret);
     } catch (e) {
       // fallback: set raw session id
       valueToSet = req.sessionID;
     }
     // set cookie with current (signed) session id
     res.cookie(cookieName, valueToSet, cookieOptions);
-    console.log('[Auth] setSessionCookie: Set-Cookie emitted for sessionID', req.sessionID);
+    console.log(
+      "[Auth] setSessionCookie: Set-Cookie emitted for sessionID",
+      req.sessionID
+    );
   } catch (e) {
-    console.warn('Failed to set session cookie explicitly', e);
+    console.warn("Failed to set session cookie explicitly", e);
   }
 }
 
 // Create verifier lazily so env vars are available at runtime
 function createVerifier() {
   const userPoolId = process.env.COGNITO_USER_POOL_ID;
-  const clientId = process.env.COGNITO_USER_POOL_CLIENT_ID || process.env.COGNITO_CLIENT_ID;
+  const clientId =
+    process.env.COGNITO_USER_POOL_CLIENT_ID || process.env.COGNITO_CLIENT_ID;
   if (!userPoolId || !clientId) {
-    throw new Error('COGNITO_USER_POOL_ID and COGNITO_USER_POOL_CLIENT_ID must be set');
+    throw new Error(
+      "COGNITO_USER_POOL_ID and COGNITO_USER_POOL_CLIENT_ID must be set"
+    );
   }
   return CognitoJwtVerifier.create({
     userPoolId,
-    tokenUse: 'id',
+    tokenUse: "id",
     clientId,
   });
 }
+function generateToken(user) {
+  return jwt.sign(
+    { uid: user.uid, email: user.email, name: user.name },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" } // token valid for 7 days
+  );
+}
+function verifyToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "No token provided" });
 
-router.post('/login', async (req, res) => {
-  // This route supports two login modes:
-  // 1) Cognito ID token login: { idToken }
-  // 2) Email/password login: { email, password }
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ error: "Invalid or expired token" });
+    req.user = decoded;
+    next();
+  });
+}
+
+router.post("/login", async (req, res) => {
   const { idToken, email, password } = req.body || {};
 
-  // Mode 1: Cognito ID token
+  // Cognito (if used) — unchanged
   if (idToken) {
     try {
       const verifier = createVerifier();
       const payload = await verifier.verify(idToken);
-
       const uid = payload.sub;
       const emailAddr = payload.email;
-      const name = payload.name || payload['cognito:username'] || '';
+      const name = payload.name || payload["cognito:username"] || "";
 
       const user = await User.findOneAndUpdate(
         { uid },
@@ -108,98 +142,76 @@ router.post('/login', async (req, res) => {
         { upsert: true, new: true }
       );
 
-      // For session-first SPA flows we do not set a cookie here by default.
-      // Return token and user to the client.
+      // Return Cognito token as-is
       return res.status(200).json({ token: idToken, user });
     } catch (error) {
-      console.error('Cognito login error:', error);
-      return res.status(401).json({ error: 'Invalid ID token' });
+      console.error("Cognito login error:", error);
+      return res.status(401).json({ error: "Invalid ID token" });
     }
   }
 
-  // Mode 2: Email/password login
+  // ✅ Email/password login flow (JWT)
   if (email && password) {
     try {
-  const emailNormalized = String(email || '').trim().toLowerCase();
-  const user = await User.findOne({ email: { $regex: new RegExp('^' + emailNormalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') } }).exec();
+      const emailNormalized = String(email).trim().toLowerCase();
+
+      const user = await User.findOne({
+        email: {
+          $regex: new RegExp(
+            "^" + emailNormalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
+            "i"
+          ),
+        },
+      }).exec();
+
       if (!user) {
-        console.warn(`[Auth] login attempt for non-existent user: ${emailNormalized}`);
-        return res.status(401).json({ error: 'Invalid credentials' });
+        console.warn(`[Auth] No user found for ${emailNormalized}`);
+        return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const stored = user.password;
-      console.log(`[Auth] user found for login: ${user.email} uid=${user.uid} password_present=${!!stored}`);
-      let ok = false;
-      let needsRehash = false;
+      // Compare password
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
-      if (!stored) {
-        // No password set for this user
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      // Heuristic: if stored starts with $2 (bcrypt), use bcrypt.compare
-      if (typeof stored === 'string' && stored.startsWith('$2')) {
-        try {
-          ok = await bcrypt.compare(password, stored);
-          console.log('[Auth] bcrypt.compare result for', user.email, ok);
-        } catch (e) {
-          console.error('[Auth] bcrypt.compare failed', e);
+      // ✅ Generate JWT token
+      const token = jwt.sign(
+        { id: user._id, email: user.email },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: JWT_EXPIRES_IN,
         }
-      } else {
-        // Plaintext fallback for legacy data: compare and re-hash on success
-        if (password === stored) {
-          ok = true;
-          needsRehash = true;
-        }
-      }
+      );
 
-      if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-
-      // If legacy plaintext matched, re-hash the password and store it
-      if (needsRehash) {
-        try {
-          const hash = await bcrypt.hash(password, 10);
-          user.password = hash;
-          await user.save();
-          console.log(`Re-hashed password for user ${user.email}`);
-        } catch (e) {
-          console.warn('Failed to rehash password for user', user.email, e);
-        }
-      }
-
-      // Establish server session for session-first endpoints
-      try {
-        if (req.session) {
-          req.session.userInfo = { uid: user.uid, email: user.email, name: user.name, photoURL: user.photoURL };
-          req.session.save?.(() => {});
-              // ensure cookie is set for browsers behind proxies
-              try { setSessionCookie(req, res); } catch (e) {}
-        }
-      } catch (e) {
-        console.warn('Failed to create session for user', user.email, e);
-      }
-
-      return res.json({ user });
+      return res.json({
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+        },
+        token, // send JWT to frontend
+      });
     } catch (err) {
-      console.error('Password login error:', err);
-      return res.status(500).json({ error: 'Server error' });
+      console.error("Password login error:", err);
+      return res.status(500).json({ error: "Server error" });
     }
   }
 
-  // If no supported auth mode provided
-  return res.status(400).json({ error: 'No credentials provided' });
+  return res.status(400).json({ error: "No credentials provided" });
 });
 
 // Google ID token login - client sends the Google ID token obtained from client-side
-router.post('/google-login', async (req, res) => {
+router.post("/google-login", async (req, res) => {
   const { idToken } = req.body;
-  if (!idToken) return res.status(400).json({ error: 'No ID token provided' });
+  if (!idToken) return res.status(400).json({ error: "No ID token provided" });
   try {
-    const ticket = await googleClient.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID });
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
     const payload = ticket.getPayload();
     const uid = payload.sub;
     const email = payload.email;
-    const name = payload.name || '';
+    const name = payload.name || "";
 
     const user = await User.findOneAndUpdate(
       { uid },
@@ -210,30 +222,37 @@ router.post('/google-login', async (req, res) => {
     // Establish server-side session (if sessions enabled in app)
     try {
       if (req.session) {
-        req.session.userInfo = { uid: user.uid, email: user.email, name: user.name, photoURL: user.photoURL };
+        req.session.userInfo = {
+          uid: user.uid,
+          email: user.email,
+          name: user.name,
+          photoURL: user.photoURL,
+        };
         // Persist session
         req.session.save?.(() => {});
-            try { setSessionCookie(req, res); } catch (e) {}
+        try {
+          setSessionCookie(req, res);
+        } catch (e) {}
       }
     } catch (e) {
-      console.warn('Failed to establish session after Google login', e);
+      console.warn("Failed to establish session after Google login", e);
     }
 
     return res.json({ token: idToken, user });
   } catch (err) {
-    console.error('Google login error:', err);
-    return res.status(401).json({ error: 'Invalid Google ID token' });
+    console.error("Google login error:", err);
+    return res.status(401).json({ error: "Invalid Google ID token" });
   }
 });
 
 // Register new user with email/password
-router.post('/register', async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
     // 1️⃣ Validate input
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      return res.status(400).json({ error: "Email and password are required" });
     }
 
     // 2️⃣ Normalize email (to avoid duplicates like user@GMAIL.com vs user@gmail.com)
@@ -242,7 +261,7 @@ router.post('/register', async (req, res) => {
     // 3️⃣ Check if user already exists (case-insensitive)
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(409).json({ error: 'User already exists' });
+      return res.status(409).json({ error: "User already exists" });
     }
 
     // 4️⃣ Hash password for security
@@ -255,70 +274,76 @@ router.post('/register', async (req, res) => {
     const newUser = new User({
       uid,
       email: normalizedEmail,
-      name: name || '',
+      name: name || "",
       password: hashedPassword,
     });
 
     await newUser.save();
 
-    // 7️⃣ Create session (if using express-session)
-    if (req.session) {
-      req.session.userInfo = {
-        uid: newUser.uid,
-        email: newUser.email,
-        name: newUser.name,
-        photoURL: newUser.photoURL,
-      };
-    }
+    // // 7️⃣ Create session (if using express-session)
+    // if (req.session) {
+    //   req.session.userInfo = {
+    //     uid: newUser.uid,
+    //     email: newUser.email,
+    //     name: newUser.name,
+    //     photoURL: newUser.photoURL,
+    //   };
+    // }
 
-    // 8️⃣ Send success response
-    return res.status(201).json({ user: newUser });
+    // // 8️⃣ Send success response
+    // return res.status(201).json({ user: newUser });
 
+    const token = generateToken(newUser);
+
+    // 8️⃣ Send success response with JWT
+    return res.status(201).json({ user: newUser, token });
   } catch (err) {
-    console.error('Register error:', err);
+    console.error("Register error:", err);
 
     // Handle duplicate email
     if (err.code === 11000) {
-      return res.status(409).json({ error: 'User already exists' });
+      return res.status(409).json({ error: "User already exists" });
     }
 
     // Generic server error
-    return res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: "Server error" });
   }
 });
 
 // Logout endpoint for SPA (destroys server session and clears session cookie)
-router.post('/logout', (req, res) => {
+router.post("/logout", (req, res) => {
   try {
-    const cookieName = process.env.SESSION_COOKIE_NAME || 'connect.sid';
+    const cookieName = process.env.SESSION_COOKIE_NAME || "connect.sid";
     if (req.session) {
       req.session.destroy((err) => {
         if (err) {
-          console.error('[Auth] session destroy error:', err);
-          return res.status(500).json({ error: 'Could not log out.' });
+          console.error("[Auth] session destroy error:", err);
+          return res.status(500).json({ error: "Could not log out." });
         }
         try {
-          const clearOpts = { path: '/' };
-          if (process.env.SESSION_COOKIE_DOMAIN) clearOpts.domain = process.env.SESSION_COOKIE_DOMAIN;
+          const clearOpts = { path: "/" };
+          if (process.env.SESSION_COOKIE_DOMAIN)
+            clearOpts.domain = process.env.SESSION_COOKIE_DOMAIN;
           // sameSite/secure flags intentionally omitted for clear; browser will clear by name+domain+path
           res.clearCookie(cookieName, clearOpts);
         } catch (e) {
-          console.warn('[Auth] failed to clear cookie during logout:', e);
+          console.warn("[Auth] failed to clear cookie during logout:", e);
         }
-        return res.json({ message: 'Logged out successfully' });
+        return res.json({ message: "Logged out successfully" });
       });
     } else {
       // No session exists
       try {
-        const clearOpts = { path: '/' };
-        if (process.env.SESSION_COOKIE_DOMAIN) clearOpts.domain = process.env.SESSION_COOKIE_DOMAIN;
+        const clearOpts = { path: "/" };
+        if (process.env.SESSION_COOKIE_DOMAIN)
+          clearOpts.domain = process.env.SESSION_COOKIE_DOMAIN;
         res.clearCookie(cookieName, clearOpts);
       } catch (e) {}
-      return res.json({ message: 'No session to clear' });
+      return res.json({ message: "No session to clear" });
     }
   } catch (err) {
-    console.error('[Auth] /logout error:', err);
-    return res.status(500).json({ error: 'Server error' });
+    console.error("[Auth] /logout error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
 });
 

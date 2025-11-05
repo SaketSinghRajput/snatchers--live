@@ -1,13 +1,17 @@
 import React from "react";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
-import api from '../api';
-import { toast } from 'react-toastify';
+import api from "../api";
+import { toast } from "react-toastify";
 
 // Simple currency formatter (INR). Keeps no fractional digits to match original UI.
 const formatCurrency = (value) => {
   try {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(value);
   } catch (e) {
     return `₹${value}`;
   }
@@ -38,31 +42,33 @@ const ProductCard = ({
 
   const handleWishlistClick = async (e) => {
     e.stopPropagation();
-    if (typeof onToggleWishlist === 'function') {
+    if (typeof onToggleWishlist === "function") {
       onToggleWishlist(e);
       return;
     }
 
     if (!productId) {
-      console.warn('ProductCard: no product id provided for wishlist API fallback');
-      toast.error('Cannot update wishlist (missing product id)');
+      console.warn(
+        "ProductCard: no product id provided for wishlist API fallback"
+      );
+      toast.error("Cannot update wishlist (missing product id)");
       return;
     }
 
     try {
       if (wishlisted) {
         await api.delete(`/api/wishlist/${productId}`);
-        toast.success('Removed from wishlist');
+        toast.success("Removed from wishlist");
       } else {
-        await api.post('/api/wishlist/add', { productId });
-        toast.success('Added to wishlist');
+        await api.post("/api/wishlist/add", { productId });
+        toast.success("Added to wishlist");
       }
-      window.dispatchEvent(new Event('wishlist:changed'));
+      window.dispatchEvent(new Event("wishlist:changed"));
     } catch (err) {
       if (err.response?.status === 401) {
-        toast.error('Please log in to add to wishlist.');
+        toast.error("Please log in to add to wishlist.");
       } else {
-        toast.error('Could not update wishlist.');
+        toast.error("Could not update wishlist.");
       }
     }
   };
@@ -111,13 +117,25 @@ const ProductCard = ({
 
       {/* Product image */}
       <div className="mb-2.5 sm:mb-3 product-thumb overflow-hidden rounded-md">
-        <img src={image} alt={title} className="w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" loading="lazy" />
+        <img
+          src={image}
+          alt={title}
+          className="w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
+          loading="lazy"
+        />
       </div>
 
       {/* Product details */}
       <div className="product-details relative z-10">
         <h2 className="text-[8px] sm:text-[10px] font-normal uppercase font-montserrat mb-0.5 group-hover:text-pink-600 transition-colors duration-400 ease-in-out">
-          <button type="button" onClick={(e) => { e.stopPropagation(); onClick?.(); }} className="text-left w-full">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+            className="text-left w-full"
+          >
             {title}
           </button>
         </h2>
@@ -129,7 +147,12 @@ const ProductCard = ({
           aria-label={`Rating: ${rating} out of 5 stars`}
         >
           {Array.from({ length: 5 }).map((_, i) => (
-            <i key={i} className={`fa fa-star ${i < rating ? "opacity-100" : "opacity-30"} transition-opacity duration-400 ease-in-out`} />
+            <i
+              key={i}
+              className={`fa fa-star ${
+                i < rating ? "opacity-100" : "opacity-30"
+              } transition-opacity duration-400 ease-in-out`}
+            />
           ))}
         </div>
 
@@ -137,12 +160,20 @@ const ProductCard = ({
         <div className="mb-2">
           {offerPrice ? (
             <div className="flex items-baseline gap-3">
-              <span className="text-sm text-gray-500 line-through">{formatCurrency(price)}</span>
-              <span className="text-black font-semibold text-sm sm:text-base">{formatCurrency(offerPrice)}</span>
-              <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded ml-2">Offer</span>
+              <span className="text-sm text-gray-500 line-through">
+                {formatCurrency(price)}
+              </span>
+              <span className="text-black font-semibold text-sm sm:text-base">
+                {formatCurrency(offerPrice)}
+              </span>
+              <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded ml-2">
+                Offer
+              </span>
             </div>
           ) : (
-            <span className="block text-black font-semibold text-sm sm:text-base mb-2">{formatCurrency(price)}</span>
+            <span className="block text-black font-semibold text-sm sm:text-base mb-2">
+              {formatCurrency(price)}
+            </span>
           )}
         </div>
 
@@ -152,7 +183,11 @@ const ProductCard = ({
             e.stopPropagation();
             isInCart ? onRemoveFromCart?.() : onAddToCart?.();
           }}
-          className={`border ${isInCart ? "border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white" : "border-black text-black hover:bg-black hover:text-white"} uppercase text-xs font-semibold py-1 px-3 rounded transition-colors duration-300 mx-auto block`}
+          className={`border ${
+            isInCart
+              ? "border-gray-600 text-gray-600 hover:bg-gray-600 hover:text-white"
+              : "border-black text-black hover:bg-black hover:text-white"
+          } uppercase text-xs font-semibold py-1 px-3 rounded transition-colors duration-300 mx-auto block`}
         >
           {isInCart ? "Remove from Cart" : "Add to Cart"}
         </button>
@@ -183,5 +218,3 @@ ProductCard.propTypes = {
 };
 
 export default ProductCard;
-
-
